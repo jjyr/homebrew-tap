@@ -1,6 +1,6 @@
 cask "vibe-caffeine" do
-  version "0.1.1"
-  sha256 "5b2271606b0e2ecb64c80327e287d6d5afccaf3a66adbca9a8d654099397a597"
+  version "0.1.2"
+  sha256 "d5a56094b76ee87ffa6626bc7d46ff2d4a5a9a2a7dcf93a78fc38419070f8863"
 
   url "https://github.com/jjyr/vibe-caffeine/releases/download/v#{version}/VibeCaffeine.app.zip"
   name "Vibe Caffeine"
