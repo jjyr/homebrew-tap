@@ -11,6 +11,12 @@ cask "vibe-caffeine" do
 
   app "VibeCaffeine.app"
 
+  postflight do
+    system_command "/usr/bin/xattr",
+                   args: ["-cr", "#{appdir}/VibeCaffeine.app"],
+                   sudo: false
+  end
+
   zap trash: [
     "~/Library/Preferences/com.jjy.VibeCaffeine.plist",
   ]
