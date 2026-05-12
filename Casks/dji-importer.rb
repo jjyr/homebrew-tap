@@ -1,6 +1,6 @@
 cask "dji-importer" do
-  version "0.1.0"
-  sha256 "197db38297dd207acf351c2e5fd5c20f6ac5c0296c4bd9156b4e94d15e6e46d6"
+  version "0.1.1"
+  sha256 "db194cc6406a837e0a202552d19d3950f8a3a1709770dea8fd7f7fcb2d092a77"
 
   url "https://github.com/jjyr/dji-importer/releases/download/v#{version}/DJIImporter.app.zip"
   name "DJI Importer"
