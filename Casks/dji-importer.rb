@@ -7,7 +7,7 @@ cask "dji-importer" do
   desc "Import DJI Pocket 3 media into Apple Photos"
   homepage "https://github.com/jjyr/dji-importer"
 
-  depends_on macos: ">= :ventura"
+  depends_on macos: :ventura
 
   app "DJIImporter.app"
 
@@ -17,7 +17,5 @@ cask "dji-importer" do
                    sudo: false
   end
 
-  zap trash: [
-    "~/Library/Preferences/com.jjy.DJIImporter.plist",
-  ]
+  zap trash: "~/Library/Preferences/com.jjy.DJIImporter.plist"
 end
