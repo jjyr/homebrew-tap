@@ -10,6 +10,20 @@ brew tap jjyr/tap
 
 ## Available Casks
 
+### Meow
+
+Native macOS app for translating DRM-free EPUB books with Codex CLI,
+DeepSeek, or an OpenAI-compatible API.
+
+```bash
+brew install --cask meow
+```
+
+**Notes:**
+
+- Supports EPUB 2 and EPUB 3
+- Unsigned app: the cask clears quarantine attributes after install
+
 ### DJI Importer
 
 Native macOS app for importing DJI Pocket 3 media into Apple Photos.
