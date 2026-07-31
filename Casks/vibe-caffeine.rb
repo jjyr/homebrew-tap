@@ -7,7 +7,7 @@ cask "vibe-caffeine" do
   desc "Menu bar app that prevents Mac sleep when AI coding tools are active"
   homepage "https://github.com/jjyr/vibe-caffeine"
 
-  depends_on macos: ">= :ventura"
+  depends_on macos: :ventura
 
   app "VibeCaffeine.app"
 
