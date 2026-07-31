@@ -39,7 +39,7 @@ brew install --cask dji-importer
 
 ### Vibe Caffeine
 
-Menu bar app that prevents Mac sleep when AI coding tools (Claude Code, Codex, OpenCode) are active.
+Menu bar app that prevents Mac sleep when AI coding tools (Claude Code, Codex, OpenCode, pi) are active.
 
 ```bash
 brew install --cask vibe-caffeine
