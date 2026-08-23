@@ -1,6 +1,6 @@
 cask "meow" do
-  version "0.0.1"
-  sha256 "9dc93bdad0e469f22517edcdabcee1bcf75b9c3e886633e9c74d9082cd99d45e"
+  version "0.1.0"
+  sha256 "e65ca98db10337a48c05125aeb8e6d641efcaa2ebb3bfb1c6fe477aafec04048"
 
   url "https://github.com/jjyr/meow-translate/releases/download/v#{version}/Meow-v#{version}-macOS.zip"
   name "Meow"
