@@ -1,0 +1,193 @@
+#!/usr/bin/env bash
+# Update a cask version + sha256 from its GitHub release asset, then publish.
+#
+# Usage:
+#   ./scripts/bump-cask <cask> <version>
+#   ./scripts/bump-cask meow 0.1.0
+#   ./scripts/bump-cask meow 0.1.0 --no-commit
+#   ./scripts/bump-cask meow 0.1.0 --file ./Meow-v0.1.0-macOS.zip
+#
+# Options:
+#   --file PATH     Use a local zip instead of downloading from the cask url
+#   --no-commit     Update the cask file only (no git commit / push)
+#   --dry-run       Show what would change; do not write or commit
+#   -h, --help      Show this help
+
+set -euo pipefail
+
+usage() {
+  sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'
+}
+
+die() {
+  echo "error: $*" >&2
+  exit 1
+}
+
+CASK=""
+VERSION=""
+LOCAL_FILE=""
+NO_COMMIT=0
+DRY_RUN=0
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --file)
+      [[ $# -ge 2 ]] || die "--file requires a path"
+      LOCAL_FILE="$2"
+      shift 2
+      ;;
+    --no-commit)
+      NO_COMMIT=1
+      shift
+      ;;
+    --dry-run)
+      DRY_RUN=1
+      shift
+      ;;
+    -*)
+      die "unknown option: $1"
+      ;;
+    *)
+      if [[ -z "$CASK" ]]; then
+        CASK="$1"
+      elif [[ -z "$VERSION" ]]; then
+        VERSION="$1"
+      else
+        die "unexpected argument: $1"
+      fi
+      shift
+      ;;
+  esac
+done
+
+[[ -n "$CASK" && -n "$VERSION" ]] || die "usage: bump-cask <cask> <version> [--file PATH] [--no-commit] [--dry-run]"
+[[ "$VERSION" != v* ]] || die "version should not include a leading v (got: $VERSION)"
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+CASK_FILE="$ROOT/Casks/${CASK}.rb"
+[[ -f "$CASK_FILE" ]] || die "cask not found: $CASK_FILE"
+
+url_template="$(
+  awk '
+    /^[[:space:]]*url[[:space:]]+"/ {
+      line = $0
+      sub(/^[[:space:]]*url[[:space:]]+"/, "", line)
+      sub(/".*$/, "", line)
+      print line
+      exit
+    }
+  ' "$CASK_FILE"
+)"
+[[ -n "$url_template" ]] || die "could not parse url from $CASK_FILE"
+
+# Expand Homebrew-style #{version} (and plain #{version} only) in the url template.
+asset_url="${url_template//\#\{version\}/$VERSION}"
+
+old_version="$(
+  awk '
+    /^[[:space:]]*version[[:space:]]+"/ {
+      line = $0
+      sub(/^[[:space:]]*version[[:space:]]+"/, "", line)
+      sub(/".*$/, "", line)
+      print line
+      exit
+    }
+  ' "$CASK_FILE"
+)"
+old_sha="$(
+  awk '
+    /^[[:space:]]*sha256[[:space:]]+"/ {
+      line = $0
+      sub(/^[[:space:]]*sha256[[:space:]]+"/, "", line)
+      sub(/".*$/, "", line)
+      print line
+      exit
+    }
+  ' "$CASK_FILE"
+)"
+
+tmpdir=""
+cleanup() {
+  if [[ -n "$tmpdir" && -d "$tmpdir" ]]; then
+    rm -rf "$tmpdir"
+  fi
+}
+trap cleanup EXIT
+
+if [[ -n "$LOCAL_FILE" ]]; then
+  [[ -f "$LOCAL_FILE" ]] || die "file not found: $LOCAL_FILE"
+  archive="$LOCAL_FILE"
+else
+  tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/bump-cask.XXXXXX")"
+  archive="$tmpdir/asset.zip"
+  echo "Downloading $asset_url"
+  if ! curl -fsSL --retry 3 --retry-delay 2 -o "$archive" "$asset_url"; then
+    die "download failed (is v${VERSION} released?): $asset_url"
+  fi
+fi
+
+new_sha="$(shasum -a 256 "$archive" | awk '{ print $1 }')"
+[[ ${#new_sha} -eq 64 ]] || die "failed to compute sha256"
+
+echo "cask:     $CASK"
+echo "version:  ${old_version:-?} -> $VERSION"
+echo "sha256:   ${old_sha:-?} -> $new_sha"
+echo "url:      $asset_url"
+
+if [[ "$DRY_RUN" -eq 1 ]]; then
+  echo "dry-run: no files changed"
+  exit 0
+fi
+
+if [[ "$old_version" == "$VERSION" && "$old_sha" == "$new_sha" ]]; then
+  echo "already up to date"
+  exit 0
+fi
+
+tmp_rb="$(mktemp "${TMPDIR:-/tmp}/bump-cask-rb.XXXXXX")"
+awk -v ver="$VERSION" -v sha="$new_sha" '
+  BEGIN { v_done = 0; s_done = 0 }
+  /^[[:space:]]*version[[:space:]]+"/ && !v_done {
+    sub(/version[[:space:]]+"[^"]*"/, "version \"" ver "\"")
+    v_done = 1
+  }
+  /^[[:space:]]*sha256[[:space:]]+"/ && !s_done {
+    sub(/sha256[[:space:]]+"[^"]*"/, "sha256 \"" sha "\"")
+    s_done = 1
+  }
+  { print }
+  END {
+    if (!v_done) {
+      print "error: version line not found" > "/dev/stderr"
+      exit 1
+    }
+    if (!s_done) {
+      print "error: sha256 line not found" > "/dev/stderr"
+      exit 1
+    }
+  }
+' "$CASK_FILE" > "$tmp_rb"
+mv "$tmp_rb" "$CASK_FILE"
+
+echo "Updated $CASK_FILE"
+
+if [[ "$NO_COMMIT" -eq 1 ]]; then
+  echo "skipped commit (--no-commit)"
+  exit 0
+fi
+
+cd "$ROOT"
+git add "Casks/${CASK}.rb"
+if git diff --cached --quiet; then
+  echo "nothing to commit"
+  exit 0
+fi
+
+git commit -m "${CASK} ${VERSION}"
+git push
+echo "Published ${CASK} ${VERSION} to origin"

@@ -50,3 +50,14 @@ brew install --cask vibe-caffeine
 - Manual mode: Force prevents sleep on demand
 - 30-second idle timeout in auto mode
 - Launch at Login support
+
+## Updating a cask
+
+After a GitHub Release exists for the app, bump the cask from this repo:
+
+```bash
+./scripts/bump-cask meow 0.1.0
+```
+
+This downloads the release asset from the cask `url`, updates `version` /
+`sha256`, commits, and pushes. Use `--no-commit` or `--dry-run` to preview.
